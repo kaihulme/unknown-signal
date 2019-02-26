@@ -63,17 +63,19 @@ def least_squares(x, y, p, max_p):
 
 # get coefficients for set with optimal p
 def get_coefficients(set, p, max_p, p0_coefficients, p0_sse):
-    sse_range = 1.1
-    p1_coefficients = least_squares(set[:,0], set[:,1], p+1, max_p)
-    p1_sse = sse(set, p1_coefficients)
-    if (p<max_p and (p0_sse/p1_sse > sse_range)):
-        p0_coefficients = get_coefficients(set, p+1, max_p, p1_coefficients, p1_sse)
-    elif (p<(max_p-2)):
-        p2_coefficients = least_squares(set[:,0], set[:,1], p+2, max_p)
-        p2_sse = sse(set, p2_coefficients)
-        if (p0_sse/p2_sse > sse_range):
-            p0_coefficients = get_coefficients(set, p+2, max_p, p2_coefficients, p2_sse)
-    return p0_coefficients
+    sse_range = 1.1                                                                             # error difference to check for
+    p1_coefficients = least_squares(set[:,0], set[:,1], p+1, max_p)                             # get coefficients for p+1
+    p1_sse = sse(set, p1_coefficients)                                                          # get sse for p+1
+    if (p<max_p and (p0_sse/p1_sse > sse_range)):                                               # if error between p and p+1 is not small enough for overfitting and p+1 can be checked
+        p0_coefficients = get_coefficients(set, p+1, max_p, p1_coefficients, p1_sse)            # compare p+1 and p+2
+    elif (p<(max_p-1)):                                                                         # if p+2 can be checked check 2 ahead incase p and p+1 are similar but p and p+2 are not
+        p2_coefficients = least_squares(set[:,0], set[:,1], p+2, max_p)                         # get coefficients for p+2
+        p2_sse = sse(set, p2_coefficients)                                                      # get sse for p+2
+        if (p0_sse/p2_sse > sse_range):                                                         # if error between p and p+2 is not small enough for overfitting
+            if ((p+2) < (max_p-1)):                                                             # if p+3 can be checked check
+                p0_coefficients = get_coefficients(set, p+2, max_p, p2_coefficients, p2_sse)    # compare p+2 and p+3
+            return least_squares(set[:,0], set[:,1], p+2, max_p)                                # return coefficients for p+2
+    return p0_coefficients                                                                      # return coefficients for p
 
 # gets sse and coefficients for data
 def sse_handler(p, max_p, data):
