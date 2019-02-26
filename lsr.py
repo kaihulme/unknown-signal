@@ -59,16 +59,20 @@ def least_squares(x, y, p, max_p):
     A = np.linalg.inv(X.T.dot(X)).dot(X.T).dot(y)
     for i in range(p, max_p):
         A = np.append(A, 0)
-    pprint(A)
     return A
 
 # get coefficients for set with optimal p
 def get_coefficients(set, p, max_p, p0_coefficients, p0_sse):
+    sse_range = 1.1
     p1_coefficients = least_squares(set[:,0], set[:,1], p+1, max_p)
     p1_sse = sse(set, p1_coefficients)
-    print("P:", p, "p",p,":", p0_sse, "p",p+1,":", p1_sse, "%diff:", p0_sse/p1_sse)
-    if (p<max_p and (p0_sse/p1_sse > 1)):
+    if (p<max_p and (p0_sse/p1_sse > sse_range)):
         p0_coefficients = get_coefficients(set, p+1, max_p, p1_coefficients, p1_sse)
+    elif (p<(max_p-2)):
+        p2_coefficients = least_squares(set[:,0], set[:,1], p+2, max_p)
+        p2_sse = sse(set, p2_coefficients)
+        if (p0_sse/p2_sse > sse_range):
+            p0_coefficients = get_coefficients(set, p+2, max_p, p2_coefficients, p2_sse)
     return p0_coefficients
 
 # gets sse and coefficients for data
@@ -78,9 +82,6 @@ def sse_handler(p, max_p, data):
         p0_coefficients = least_squares(data[i][:,0], data[i][:,1], p, max_p)                  # calculate coefficients for linear
         p0_sse = sse(data[i], p0_coefficients)                                          # calculate sse for linear
         coefficients[i] = get_coefficients(data[i], p, max_p, p0_coefficients, p0_sse)            # return coefficients with least error & non-overfitting
-
-        pprint(coefficients[i])
-
     return sum_sse(data, coefficients), coefficients
 
 # extracts data from files into array of data sections
