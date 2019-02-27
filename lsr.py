@@ -7,30 +7,30 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # maps points on least squares regression function
-def map_functions(data, coefficients):
-    x_mappings = np.zeros((len(data), 100))
-    y_mappings = np.zeros((len(data), 100))
-    for i in range(len(data)):
-        x_mappings[i] = np.linspace(min(data[i][:,0]), max(data[i][:,0]), 100)
-        for j, element in enumerate(y_mappings[i]):
-            y_mappings[i][j] = coefficients[i][0]
-            for k in range(1,(len(coefficients[i]))):
-                y_mappings[i][j] += coefficients[i][k] * (x_mappings[i][j]**k)
-    return x_mappings, y_mappings
-
 # def map_functions(data, coefficients):
 #     x_mappings = np.zeros((len(data), 100))
 #     y_mappings = np.zeros((len(data), 100))
 #     for i in range(len(data)):
 #         x_mappings[i] = np.linspace(min(data[i][:,0]), max(data[i][:,0]), 100)
-#         if (coefficients[i][0]):
-#             for j, element in enumerate(y_mappings[i]):
-#                 for k in range(1,(len(coefficients[i]))):
-#                     y_mappings[i][j] += coefficients[i][k] * (x_mappings[i][j]**k)
-#         else:
-#             for j, element in enumerate(y_mappings):
-#                 y_mappings[j] = coefficients[i][0] + (coefficients[i][0] * math.sin(x_mappings[j]))
+#         for j, element in enumerate(y_mappings[i]):
+#             y_mappings[i][j] = coefficients[i][0]
+#             for k in range(1,(len(coefficients[i]))):
+#                 y_mappings[i][j] += coefficients[i][k] * (x_mappings[i][j]**k)
 #     return x_mappings, y_mappings
+
+def map_functions(data, coefficients):
+    x_mappings = np.zeros((len(data), 100))
+    y_mappings = np.zeros((len(data), 100))
+    for i in range(len(data)):
+        x_mappings[i] = np.linspace(min(data[i][:,0]), max(data[i][:,0]), 100)
+        if (coefficients[i][0]):
+            for j, element in enumerate(y_mappings[i]):
+                for k in range(1,(len(coefficients[i]))):
+                    y_mappings[i][j] += coefficients[i][k] * (x_mappings[i][j]**k)
+        else:
+            for j, element in enumerate(y_mappings):
+                y_mappings[j] = coefficients[i][0] + (coefficients[i][0] * math.sin(x_mappings[j]))
+    return x_mappings, y_mappings
 
 # plots least squares regression line
 def plot_graph(data, coefficients):
@@ -43,26 +43,28 @@ def plot_graph(data, coefficients):
     plt.show()
 
 # calculates sum squared error of a set of data
-def sse(set, set_coefficients):
-    sse = 0
-    for i in range(len(set)):
-        yi = set_coefficients[0]
-        for j in range(1,(len(set_coefficients))):
-            yi += set_coefficients[j] * ((set[i][0])**j)
-        sse += np.square(yi - set[i][1])
-    return sse
-
-# calculates sum squared error of a set of data
 # def sse(set, set_coefficients):
 #     sse = 0
 #     for i in range(len(set)):
-#         if (set_coefficients[0] == 0):
-#             for j in range(0,(len(set_coefficients))):
-#                 yi += set_coefficients[j] * ((set[i][0])**j)
-#         else:
-#             yi = set_coefficients[1] + (set_coefficients[1] * np.sin(set[i][1]))
+#         yi = set_coefficients[0]
+#         for j in range(1,(len(set_coefficients))):
+#             yi += set_coefficients[j] * ((set[i][0])**j)
 #         sse += np.square(yi - set[i][1])
 #     return sse
+
+#calculates sum squared error of a set of data
+def sse(set, set_coefficients):
+    sse = 0
+    yi = 0
+    for i in range(len(set)):
+        yi = 0
+        if (set_coefficients[0] == 0):
+            for j in range(0,(len(set_coefficients))):
+                yi += set_coefficients[j] * ((set[i][0])**j)
+        else:
+            yi = set_coefficients[1] + (set_coefficients[1] * np.sin(set[i][1]))
+        sse += np.square(yi - set[i][1])
+    return sse
 
 # calculates sum of all sum squared errors
 def sum_sse(data, coefficients):
@@ -84,25 +86,26 @@ def least_squares(x, y, p, max_p):
     A = np.linalg.inv(X.T.dot(X)).dot(X.T).dot(y)
     for i in range(p, max_p):
         A = np.append(A, 0)
-    return A
-    # return np.column_stack(0, A)
+    return np.append(0, A)
 
-# def least_squares_sin(x, y, max_p):
-#     xi = np.zeros(x.shape)
-#     for i, element in enumerate(x):
-#         xi[i] = np.sin(x[i])
-#     X = np.column_stack((np.ones((xi.shape[0], 1)), xi))
-#     A = np.linalg.inv(X.T.dot(X)).dot(X.T).dot(y)
-#     for i in range(1, max_p):
-#         A = np.append(A, 0)
-#     return A
-#     return np.column_stack(1, A)
+def least_squares_sin(x, y, max_p):
+    xi = np.zeros(x.shape)
+    for i, element in enumerate(x):
+        xi[i] = np.sin(x[i])
+    X = np.column_stack((np.ones((xi.shape[0], 1)), xi))
+    A = np.linalg.inv(X.T.dot(X)).dot(X.T).dot(y)
+    for i in range(1, max_p):
+        A = np.append(A, 0)
+    return np.append(1, A)
 
 # get coefficients for set with optimal p
 def get_coefficients(set, p, max_p, p0_coefficients, p0_sse):                                   # recursively compare error differences between sse for current p and (p+1) or (p+2)
     sse_range = 10                                                                              # error difference to check for
     p1_coefficients = least_squares(set[:,0], set[:,1], p+1, max_p)                             # get coefficients for p+1
     p1_sse = sse(set, p1_coefficients)                                                          # get sse for p+1
+
+    #pprint(p0_coefficients)
+
     if (p<max_p and (p0_sse/p1_sse > sse_range)):                                               # if error between p and p+1 is not small enough for overfitting and p+1 can be checked
         p0_coefficients = get_coefficients(set, p+1, max_p, p1_coefficients, p1_sse)            # compare p+1 and p+2
     elif (p<(max_p-1)):                                                                         # if p+2 can be checked check 2 ahead incase p and p+1 are similar but p and p+2 are not
@@ -116,19 +119,23 @@ def get_coefficients(set, p, max_p, p0_coefficients, p0_sse):                   
 
 # gets sse and coefficients for data
 def sse_handler(p, max_p, data):
-    coefficients = np.zeros((len(data), max_p+1))
-    # coefficients = np.zeros((len(data), max_p+2))
+    # coefficients = np.zeros((len(data), max_p+1))
+    coefficients = np.zeros((len(data), max_p+2))
     for i in range(len(data)):
 
         p0_coefficients = least_squares(data[i][:,0], data[i][:,1], p, max_p)                   # calculate coefficients for linear
         p0_sse = sse(data[i], p0_coefficients)                                                  # calculate sse for linear
         coefficients[i] = get_coefficients(data[i], p, max_p, p0_coefficients, p0_sse)          # return coefficients with least error & non-overfitting
 
-        # sin_coefficients = least_squares_sin(data[i][:,0], data[i][:,1], max_p)
-        # sin_sse = sse(data[i], sin_coefficients)
-        #
-        # if (sin_sse < sse(data[i], coefficients[i])):
-        #     coefficients[i] = sin_coefficients
+        print("polynomial sse:", sse(data[i], coefficients[i]))
+
+        sin_coefficients = least_squares_sin(data[i][:,0], data[i][:,1], max_p)
+        sin_sse = sse(data[i], sin_coefficients)
+
+        print("sin sse", sin_sse)
+
+        if (sin_sse < sse(data[i], coefficients[i])):
+            coefficients[i] = sin_coefficients
 
     return sum_sse(data, coefficients), coefficients
 
