@@ -140,7 +140,7 @@ def get_coefficients(set, p, max_p, p1_coefficients, p1_sse, accuracy_target):
     return p3_coefficients # return polynomial regression coefficients of complexity p=3
 
 ################################################################################
-############################# DATA HANDLERS ####################################
+####################### DATA AND COMPUTATION HANDLERS ##########################
 
 # gets sse and coefficients for data
 def sse_handler(data):
