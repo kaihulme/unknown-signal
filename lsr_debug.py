@@ -106,12 +106,28 @@ def get_coefficients(set, p, max_p, p1_coefficients, p1_sse, sse_range):        
     pS_sse = sse(set, pS_coefficients)
     p3_coefficients = least_squares(set[:,0], set[:,1], p+2, max_p)                                             # get coefficients for p+2
     p3_sse = sse(set, p3_coefficients)                                                                          # get sse for p+2
+
+    print("linear sse:", p1_sse, "sinusoidal sse:", pS_sse, "%accuracyImprovement:", diff(p1_sse, pS_sse))
+
     if (diff(p1_sse, pS_sse) < sse_range):
+
+        print("dont use sin")
+        print("linear sse:", p1_sse, "cubic sse:", p3_sse, "%accuracyImprovement:", diff(p1_sse, p3_sse))
+
         if (diff(p1_sse, p3_sse) > sse_range):
+            print("use cubic")
             return p3_coefficients
+        print("use linear")
         return p1_coefficients
-    if (diff(pS_sse, p3_sse) < sse_range):
+
+    print("dont use linear")
+    print("sinusoidal sse:", pS_sse, "cubic sse:", p3_sse, "%accuracyImprovement:", diff(pS_sse, p3_sse))
+
+    if (diff(pS_sse, p3_sse) < sse_range):                                                                 # if error between p and p+2 is not small enough for overfitting and p+1 can be checked
+        print("use sinusoidal")
         return pS_coefficients                                                                                  # return coefficients for p+2
+
+    print("use cubic")
     return p3_coefficients                                                                                      # return coefficients for p
 
 # gets sse and coefficients for data
@@ -122,10 +138,16 @@ def sse_handler(data):
     sse_range = 20 # difference must be >10%
     coefficients = np.zeros((len(data), max_p+2))
     for i in range(len(data)):
+
+        print("\nSET:", i+1)
+
         p0_coefficients = least_squares(data[i][:,0], data[i][:,1], p, max_p)                                   # calculate coefficients for linear
         p0_sse = sse(data[i], p0_coefficients)                                                                  # calculate sse for linear
         if (calcForAllP): get_coefficients_allP(data[i], p, max_p, p0_coefficients, p0_sse, sse_range)
         else: coefficients[i] = get_coefficients(data[i], p, max_p, p0_coefficients, p0_sse, sse_range)         # return coefficients with least error & non-overfitting
+
+    print("\n")
+
     return sum_sse(data, coefficients), coefficients
 
 # extracts data from files into array of data sections
