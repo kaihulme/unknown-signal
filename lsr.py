@@ -28,9 +28,12 @@ def plot_graph(data, coefficients):
         ax.scatter(data[i][:,0], data[i][:,1])
     for i in range(len(data)):
         if (coefficients[i][0] == 0):
-            ax.plot(x_mappings[i], y_mappings[i], c='r')
+            if (coefficients[i][3] == 0):
+                ax.plot(x_mappings[i], y_mappings[i], c='g')
+            else:
+                ax.plot(x_mappings[i], y_mappings[i], c='r')
         else:
-            ax.plot(x_mappings[i], y_mappings[i], c='g')
+            ax.plot(x_mappings[i], y_mappings[i], c='b')
     plt.show()
 
 #calculates sum squared error of a set of data
@@ -97,52 +100,60 @@ def get_coefficients_allP(set, p, max_p, p0_coefficients, p0_sse, sse_range):   
     return p0_coefficients                                                                                      # return coefficients for p
 
 # determine best p for p=1 and p=3
-def get_coefficients(set, p, max_p, p0_coefficients, p0_sse, sse_range):                                        # error difference to check for
-    p1_coefficients = least_squares(set[:,0], set[:,1], p+2, max_p)                                             # get coefficients for p+2
-    p1_sse = sse(set, p1_coefficients)                                                                          # get sse for p+2
+def get_coefficients(set, p, max_p, p1_coefficients, p1_sse, sse_range):                                        # error difference to check for
+    pS_coefficients = least_squares_sin(set[:,0], set[:,1], max_p)
+    pS_sse = sse(set, pS_coefficients)
+    p3_coefficients = least_squares(set[:,0], set[:,1], p+2, max_p)                                             # get coefficients for p+2
+    p3_sse = sse(set, p3_coefficients)                                                                          # get sse for p+2
 
-    print("\n%difference p =", p, "/ p =", p+2, ":", p0_sse/p1_sse)
-
-    if (p<max_p and (p0_sse/p1_sse > sse_range)):                                                               # if error between p and p+2 is not small enough for overfitting and p+1 can be checked
-        return p1_coefficients                                                                                  # return coefficients for p+2
-    return p0_coefficients                                                                                      # return coefficients for p
+    print("linear sse:", p1_sse, "sinusoidal sse:", pS_sse)
+    print("%difference linear / sinusoidal :", p1_sse/pS_sse)
+    if (p1_sse/pS_sse < sse_range):
+        print("linear sse:", p1_sse, "cubic sse:", p3_sse)
+        print("%difference linear / cubic :", p1_sse/p3_sse)
+        if (p1_sse/p3_sse > sse_range):
+            print("use cubic")
+            return p3_coefficients
+        print("use linear")
+        return p1_coefficients
+    print("sinusoidal sse:", pS_sse, "cubic sse:", p3_sse)
+    print("%difference sinusoidal /cubic: ", pS_sse/p3_sse)
+    if (pS_sse/p3_sse < sse_range):                                                                 # if error between p and p+2 is not small enough for overfitting and p+1 can be checked
+        print("use sinusoidal")
+        return pS_coefficients                                                                                  # return coefficients for p+2
+    print("use cubic")
+    return p3_coefficients                                                                                      # return coefficients for p
 
 # gets sse and coefficients for data
-def sse_handler(p, max_p, data):
-    sse_range = 5
-
-    print("SSE RANGE: ", sse_range)
-
+def sse_handler(data):
+    p = 1 # start with linear regression
+    max_p = 3  # maximum p - set to 2 to not allow polynomials of more than degree x^2
+    sse_range = 10
     coefficients = np.zeros((len(data), max_p+2))
     for i in range(len(data)):
+
+        print("\nSET:", i+1)
+
         p0_coefficients = least_squares(data[i][:,0], data[i][:,1], p, max_p)                                   # calculate coefficients for linear
         p0_sse = sse(data[i], p0_coefficients)                                                                  # calculate sse for linear
         coefficients[i] = get_coefficients(data[i], p, max_p, p0_coefficients, p0_sse, sse_range)               # return coefficients with least error & non-overfitting
-        sin_coefficients = least_squares_sin(data[i][:,0], data[i][:,1], max_p)
-        sin_sse = sse(data[i], sin_coefficients)
 
-        # print("\npolynomial coefficients for set", i+1, ":")
-        # pprint(coefficients[i])
-        # print("sinusoidal coefficients for set", i+1, ":")
-        # pprint(sin_coefficients)
-        print("polynomial sse for set", i+1, ":", sse(data[i], coefficients[i]))
-        print("sinusoidal sse for set", i+1, ":", sin_sse)
-        print("%difference polynomial/sinusoidal:", sse(data[i], coefficients[i])/sin_sse)
-        print("%difference sinusoidal/polynomial:", sin_sse/sse(data[i], coefficients[i]))
+        # sin_coefficients = least_squares_sin(data[i][:,0], data[i][:,1], max_p)
+        # sin_sse = sse(data[i], sin_coefficients)
 
-        if (sse(data[i], coefficients[i])/sin_sse > sse_range):
-        #if (sse(data[i], coefficients[i]) > sin_sse):
-            print("use sinusoidal for set ", i+1)
-            coefficients[i] = sin_coefficients
-        elif (coefficients[i][3] == 0):
-            print("use polynomial p=1 for set", i+1)
-        elif (max_p > 2):
-            if (coefficients[i][4] == 0):
-                print("use polynomial p=2 for set", i+1)
-            else:
-                print("use polynomial p=3 for set", i+1)
-        else:
-            print("use polynomial p=2 for set", i+1)
+        # print("polynomial sse for set", i+1, ":", sse(data[i], coefficients[i]))
+        # print("sinusoidal sse for set", i+1, ":", sin_sse)
+        # print("%difference polynomial/sinusoidal:", sse(data[i], coefficients[i])/sin_sse)
+        # print("%difference sinusoidal/polynomial:", sin_sse/sse(data[i], coefficients[i]))
+        #
+        # if (sse(data[i], coefficients[i])/sin_sse > sse_range):
+        # #if (sse(data[i], coefficients[i]) > sin_sse):
+        #     print("use sinusoidal for set ", i+1)
+        #     coefficients[i] = sin_coefficients
+        # elif (coefficients[i][3] == 0):
+        #     print("use polynomial p=1 for set", i+1)
+        # else:
+        #     print("use polynomial p=3 for set", i+1)
 
     return sum_sse(data, coefficients), coefficients
 
@@ -154,11 +165,11 @@ def file_handler(file):
 # handles sse calculations and plotting calls
 def data_handler(plot, file):
     data = file_handler(file)
-    start_p = 1 # start with linear regression
-    max_p = 3  # maximum p - set to 2 to not allow polynomials of more than degree x^2
-    error, coefficients = sse_handler(start_p, max_p, data)
+    error, coefficients = sse_handler(data)
+
     print("\nTOTAL SSE: ", error, "\n")
     #print(error, "\n")                                                          TODO THIS SHOULD BE THE ONLY FINAL OUTPUT
+
     if (plot):
         plot_graph(data, coefficients)
 
@@ -166,7 +177,7 @@ def data_handler(plot, file):
 def args_handler(args):
     if (len(args) == 1 or len(args) == 2):
         if (args[0][-4:] == ".csv"):
-            file = "train/" + args[0]
+            file = args[0]
             exists = os.path.isfile(file)
             if exists:
                 if (os.stat(file).st_size == 0):
