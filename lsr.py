@@ -1,9 +1,23 @@
+################################################################################
+################################################################################
+####                         Kai Hulme (kh16747)                            ####
+####                     Symbols, Patterns & Signals                        ####
+####                         CW1: Unknown Signal                            ####
+####                            Febuary 2019                                ####
+################################################################################
+################################################################################
+
+############################### IMPORTS ########################################
+
 from __future__ import print_function # allows print from python 3 in python 2.6+
 from pprint import pprint # pretty print for arrays
 import sys # for command line argument fetching
 import os # for system file validation
 import numpy as np # for data manipulation
 import matplotlib.pyplot as plt # for graph plotting
+
+################################################################################
+######################## GRAPH PLOTTING FUNCTIONS ##############################
 
 # maps functions to data points for graph plotting
 def map_functions(data, coefficients):
@@ -20,7 +34,7 @@ def map_functions(data, coefficients):
                 y_mappings[i][j] = coefficients[i][1] + (coefficients[i][2] * np.sin(x_mappings[i][j])) # apply a + bsin(X) for current x value where a and b are coefficients for sinusoidal function
     return x_mappings, y_mappings # return mapped coordinates for each function in each set in data
 
-# plots least squares regression line
+# plots data and least squares regression line for polynomial and sinusoidal functions -- Linear:GREEN | cubic:RED | sinusoidal:BLUE
 def plot_graph(data, coefficients):
     x_mappings, y_mappings = map_functions(data, coefficients) # maps points to coordinates with correct regression function
     fig, ax = plt.subplots() # creates figure to plot graph to
@@ -35,6 +49,9 @@ def plot_graph(data, coefficients):
         else: # if not polynomial (if sinusoidal)
             ax.plot(x_mappings[i], y_mappings[i], c='b') # plot blue sinusoidal regression line
     plt.show() # show figure
+
+################################################################################
+######################## SUM SQUARED ERROR FUNCTIONS ###########################
 
 #calculates sum squared error of a set of data
 def sse(set, set_coefficients):
@@ -56,6 +73,9 @@ def sum_sse(data, coefficients):
         i_sse = sse(data[i], coefficients[i]) # get SSE for i'th set in data
         sum += i_sse # increase sum of SSE by SSE of i'th set in data
     return sum # return sum of each set's SSE in data
+
+################################################################################
+#################### LEAST SQUARES REGRESSION FUNCTIONS ########################
 
 # calculates least squares polynomial regression line coefficients for given complexity p
 def least_squares(x, y, p, max_p):
@@ -82,52 +102,58 @@ def least_squares_sin(x, y, max_p):
         A = np.append(A, 0) # append 0 so returned shape is equal for each sets function independent of complexity
     return np.append(1, A) # prepend 1 to functions coefficients to indicate sinusoidal function
 
+################################################################################
+####################### OPTIMAL COMPLEXITY FUNCTIONS ###########################
+
 # % improvement of SSE from previous function to next
 def diff(sse_prev, sse_next):
     return 100-((sse_next/sse_prev)*100) # calculates the accuracy improvement % in terms of SSE of one function to another
 
 # THIS FUNCTION SHALL NOT BE CALLED - calculates coefficients for regression lines of optimal complexity without overfitting or exceeding degree of max_p
-# NOTE: I think this function now doesnt work due to 0/1 now being prepended to coefficients to indicate polynomial/sinusoidal
-def get_coefficients_allP(set, p, max_p, p0_coefficients, p0_sse, sse_range):
+# NOTE: did this before realising not to change the complexity of p but I like the functon so have left it in + adding the sin stuff kinda broke it
+def get_coefficients_allP(set, p, max_p, p0_coefficients, p0_sse, accuracy_target):
     p1_coefficients = least_squares(set[:,0], set[:,1], p+1, max_p) # get polynomial coefficients for complexity p+1
     p1_sse = sse(set, p1_coefficients) # get sum squared error for function of complexity p+1
-    if (p<max_p and (diff(p0_sse, p1_sse) > sse_range)): # if error between p and p+1 is not small enough for overfitting and p+1 can be checked
-        p0_coefficients = get_coefficients_allP(set, p+1, max_p, p1_coefficients, p1_sse, sse_range) # recursively call function with complexity p+1
+    if (p<max_p and (diff(p0_sse, p1_sse) > accuracy_target)): # if error between p and p+1 is not small enough for overfitting and p+1 can be checked
+        p0_coefficients = get_coefficients_allP(set, p+1, max_p, p1_coefficients, p1_sse, accuracy_target) # recursively call function with complexity p+1
     elif (p<(max_p-1)): # if p+2 can be checked check 2 ahead incase p and p+1 are similar but p and p+2 are not (in terms of SSE difference)
         p2_coefficients = least_squares(set[:,0], set[:,1], p+2, max_p) # get polynomial coefficients for complexity p+2
         p2_sse = sse(set, p2_coefficients) # get sum squared error for function of complexity p+2
-        if (diff(p0_sse, p2_sse) > sse_range): # if error between p and p+2 is not small enough for overfitting
+        if (diff(p0_sse, p2_sse) > accuracy_target): # if error between p and p+2 is not small enough for overfitting
             if ((p+2) < (max_p-1)): # if p+3 can be checked
-                p0_coefficients = get_coefficients_allP(set, p+2, max_p, p2_coefficients, p2_sse, sse_range) # recursively call function with complexity p+2
+                p0_coefficients = get_coefficients_allP(set, p+2, max_p, p2_coefficients, p2_sse, accuracy_target) # recursively call function with complexity p+2
             return p2_coefficients # return coefficients for function of complexity p+2
     return p0_coefficients # return coefficients for function of complexity of p
 
 # calculates coefficients for regression lines of optimal complexity of p=1 or p=2 without overfitting
-def get_coefficients(set, p, max_p, p1_coefficients, p1_sse, sse_range):
+def get_coefficients(set, p, max_p, p1_coefficients, p1_sse, accuracy_target):
     pS_coefficients = least_squares_sin(set[:,0], set[:,1], max_p) # gets coefficients for sinusoidal regression
     pS_sse = sse(set, pS_coefficients) # gets sum squared error for sinusoidal regression
     p3_coefficients = least_squares(set[:,0], set[:,1], p+2, max_p) # gets coefficients for polynomial regression of complexity p=3
     p3_sse = sse(set, p3_coefficients) # gets sum squared error for polynomial regression of complexity p=3
-    if (diff(p1_sse, pS_sse) < sse_range): # if the difference in complexity between linear and sinusoidal regression lines are less than sse_range %
-        if (diff(p1_sse, p3_sse) > sse_range): # if the difference in complexity between linear and cubic regression lines are greater than sse_range %
+    if (diff(p1_sse, pS_sse) < accuracy_target): # if the difference in complexity between linear and sinusoidal regression lines are less than accuracy_target %
+        if (diff(p1_sse, p3_sse) > accuracy_target): # if the difference in complexity between linear and cubic regression lines are greater than accuracy_target %
             return p3_coefficients # return polynomial regression coefficients of complexity p=3
         return p1_coefficients # return polynomial regression coefficients of complexity p=1
-    if (diff(pS_sse, p3_sse) < sse_range): # if the difference in complexity between sinusoidal and cubic regression lines are less than sse_range %
+    if (diff(pS_sse, p3_sse) < accuracy_target): # if the difference in complexity between sinusoidal and cubic regression lines are less than accuracy_target %
         return pS_coefficients # return sinusoidal regression coefficients
     return p3_coefficients # return polynomial regression coefficients of complexity p=3
+
+################################################################################
+############################# DATA HANDLERS ####################################
 
 # gets sse and coefficients for data
 def sse_handler(data):
     calcForAllP = False # if true allows regression lines of degree p to max_p, else just p=1, p=3 or sinusoidal regression
     p = 1 # start with linear regression
-    max_p = 3  # maximum p - set to 2 to not allow polynomials of more than degree x^2
-    sse_range = 25 # to increase models complexity accuracy improvement must be >sse_range%
+    max_p = 3  # maximum complexity - only useful when calcForAllP is True; otherwise max_p=3 allows for cubic regression functions
+    accuracy_target = 15 # IMPORTANT - to increase models complexity SSE improvement must be >accuracy_target%
     coefficients = np.zeros((len(data), max_p+2)) # coefficients for each sets regression line
     for i in range(len(data)): # for each set in data
         p0_coefficients = least_squares(data[i][:,0], data[i][:,1], p, max_p) # calculate coefficients for linear regression
         p0_sse = sse(data[i], p0_coefficients) # calculate sse for linear regression
-        if (calcForAllP): get_coefficients_allP(data[i], p, max_p, p0_coefficients, p0_sse, sse_range) # for each set will calculate coefficients for regression lines of optimal complexity without overfitting or exceeding degree of max_p
-        else: coefficients[i] = get_coefficients(data[i], p, max_p, p0_coefficients, p0_sse, sse_range) # for each set will calculate coefficients for regression lines of polynomial degree 1 or 3 or sinusoidal complexity without overfitting
+        if (calcForAllP): get_coefficients_allP(data[i], p, max_p, p0_coefficients, p0_sse, accuracy_target) # for each set will calculate coefficients for regression lines of optimal complexity without overfitting or exceeding degree of max_p
+        else: coefficients[i] = get_coefficients(data[i], p, max_p, p0_coefficients, p0_sse, accuracy_target) # for each set will calculate coefficients for regression lines of polynomial degree 1 or 3 or sinusoidal complexity without overfitting
     return sum_sse(data, coefficients), coefficients # returns the sum of all sum squared errors for each set
 
 # extracts data from files into array of data sections
@@ -163,6 +189,9 @@ def args_handler(args):
     print("ERROR: expected arguments of file_name.csv (+ --plot)") # error for unexpected arguments
     return False, False, [] # returns arguments not valid, do not plot graph and no file data
 
+################################################################################
+######################## MAIN & ARGUMENT FETCHING ##############################
+
 # calls handlers for arg validation and sse
 def main(args):
     argsValid, plot, file = args_handler(args) # gets arguments validaty, whether to plot graph and file data
@@ -174,3 +203,5 @@ def main(args):
 # PROGRAM STARTS HERE
 args = sys.argv[1:] # gets programs command line arguments
 main(args) # starts main method with command line arguments
+
+################################################################################
