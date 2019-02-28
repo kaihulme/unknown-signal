@@ -135,7 +135,7 @@ def sse_handler(data):
     calcForAllP = False # if true allows regression lines of degree p to max_p, else p=1, p=3 or sinusoidal regression
     p = 1 # start with linear regression
     max_p = 3  # maximum p - set to 2 to not allow polynomials of more than degree x^2
-    sse_range = 20 # difference must be >10%
+    sse_range = 20 # difference must be >sse_range%
     coefficients = np.zeros((len(data), max_p+2))
     for i in range(len(data)):
 
